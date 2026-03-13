@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DesignerStatus {
+  pending_review
+  approved
+  rejected
+  suspended
+}
+
+enum ProjectStatus {
+  draft
+  active
+  ordered
+  closed
+}
+
+enum ShortlistStatus {
+  suggested
+  approved
+  rejected
+  added_to_cart
+}
+
+enum OrderStatus {
+  draft
+  submitted
+  paid
+  split_to_brands
+  closed
+}
+
+enum BrandPOStatus {
+  sent
+  acknowledged
+  in_production
+  dispatched
+  delivered
+  cancelled
+}
+
+enum ScrapeStatus {
+  pending
+  completed
+  failed
+}
+
+enum ActorType {
+  designer
+  client
+  admin
+  system
+}
+
+model Designer {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  fullName      String
+  businessName  String?
+  phone         String?
+  status        DesignerStatus @default(pending_review)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  clients         Client[]
+  projects        Project[]
+  shortlistItems  ShortlistItem[]
+  scrapeBatches   ScrapeBatch[]
+  pinnedComparisons PinnedComparison[]
+  orders          Order[]
+}
+
+model Client {
+  id              String   @id @default(uuid())
+  designerId      String
+  name            String
+  email           String?
+  phone           String?
+  billingAddress  Json?
+  shippingAddress Json?
+  accessCode      String?
+  createdAt       DateTime @default(now())
+
+  designer  Designer  @relation(fields: [designerId], references: [id])
+  projects  Project[]
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  designerId      String
+  clientId        String
+  name            String
+  description     String?
+  status          ProjectStatus @default(draft)
+  budgetMin       Decimal?
+  budgetMax       Decimal?
+  stylePreference String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  designer          Designer          @relation(fields: [designerId], references: [id])
+  client            Client            @relation(fields: [clientId], references: [id])
+  rooms             Room[]
+  shortlistItems    ShortlistItem[]
+  cartItems         CartItem[]
+  orders            Order[]
+  pinnedComparisons PinnedComparison[]
+}
+
+model Room {
+  id                   String   @id @default(uuid())
+  projectId            String
+  name                 String
+  lengthFt             Decimal?
+  widthFt              Decimal?
+  heightFt             Decimal?
+  areaSqft             Decimal?
+  categoryNeeds        String[]
+  budgetMin            Decimal?
+  budgetMax            Decimal?
+  clientRequirements   Json?
+  notes                String?
+  createdAt            DateTime @default(now())
+
+  project        Project         @relation(fields: [projectId], references: [id])
+  shortlistItems ShortlistItem[]
+  cartItems      CartItem[]
+  orderLineItems OrderLineItem[]
+  pinnedComparisons PinnedComparison[]
+}
+
+model ScrapeBatch {
+  id               String       @id @default(uuid())
+  sourceCollection String       @unique
+  scrapedById      String?
+  productCount     Int?
+  status           ScrapeStatus @default(pending)
+  scrapedAt        DateTime?
+  expiresAt        DateTime?
+  rawResponse      Json?
+
+  scrapedBy Designer?  @relation(fields: [scrapedById], references: [id])
+  products  Product[]
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  sourceUrl     String
+  scrapeBatchId String?
+  productName   String
+  brandName     String?
+  price         Decimal?
+  imageUrl      String?
+  productUrl    String?
+  dimensions    Json?
+  material      String?
+  finishes      String[]
+  leadTime      String?
+  metadata      Json?
+  category      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  scrapeBatch    ScrapeBatch?    @relation(fields: [scrapeBatchId], references: [id])
+  shortlistItems ShortlistItem[]
+  cartItems      CartItem[]
+  orderLineItems OrderLineItem[]
+}
+
+model ShortlistItem {
+  id              String          @id @default(uuid())
+  projectId       String
+  roomId          String
+  productId       String
+  designerId      String
+  selectedVariant Json?
+  quantity        Int             @default(1)
+  status          ShortlistStatus @default(suggested)
+  designerNotes   String?
+  clientNotes     String?
+  sharedNotes     String?
+  fitAssessment   String?
+  priorityRank    Int?
+  isPinned        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  project  Project  @relation(fields: [projectId], references: [id])
+  room     Room     @relation(fields: [roomId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+  designer Designer @relation(fields: [designerId], references: [id])
+}
+
+model PinnedComparison {
+  id                 String   @id @default(uuid())
+  projectId          String
+  roomId             String?
+  designerId         String
+  pinnedProductId    String
+  comparedProductIds String[]
+  createdAt          DateTime @default(now())
+
+  project  Project  @relation(fields: [projectId], references: [id])
+  room     Room?    @relation(fields: [roomId], references: [id])
+  designer Designer @relation(fields: [designerId], references: [id])
+}
+
+model CartItem {
+  id              String   @id @default(uuid())
+  projectId       String
+  productId       String
+  roomId          String
+  selectedVariant Json?
+  quantity        Int
+  unitPrice       Decimal?
+  createdAt       DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  room    Room    @relation(fields: [roomId], references: [id])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  projectId       String
+  designerId      String
+  status          OrderStatus @default(draft)
+  totalAmount     Decimal?
+  taxAmount       Decimal?
+  stripePaymentId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  project        Project             @relation(fields: [projectId], references: [id])
+  designer       Designer            @relation(fields: [designerId], references: [id])
+  lineItems      OrderLineItem[]
+  brandPOs       BrandPurchaseOrder[]
+}
+
+model OrderLineItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  productId       String
+  brandPoId       String?
+  roomId          String
+  selectedVariant Json?
+  quantity        Int
+  unitPrice       Decimal?
+  lineTotal       Decimal?
+
+  order   Order               @relation(fields: [orderId], references: [id])
+  product Product             @relation(fields: [productId], references: [id])
+  brandPO BrandPurchaseOrder? @relation(fields: [brandPoId], references: [id])
+  room    Room                @relation(fields: [roomId], references: [id])
+}
+
+model BrandPurchaseOrder {
+  id        String        @id @default(uuid())
+  orderId   String
+  brandName String
+  status    BrandPOStatus @default(sent)
+  subtotal  Decimal?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  order     Order           @relation(fields: [orderId], references: [id])
+  lineItems OrderLineItem[]
+}
+
+model AuditLog {
+  id         String    @id @default(uuid())
+  actorType  ActorType
+  actorId    String?
+  action     String
+  entityType String?
+  entityId   String?
+  payload    Json?
+  createdAt  DateTime  @default(now())
+}
