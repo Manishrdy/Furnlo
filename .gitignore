@@ -18,7 +18,8 @@ out/
 apps/api/prisma/migrations/
 
 # Logs
-logs/
+logs/*
+!logs/.gitkeep
 *.log
 npm-debug.log*
 
