@@ -4,8 +4,22 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '@furnlo/db';
 import { config } from '../config';
+import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+
+const SESSION_COOKIE = 'session';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  };
+}
 
 const designerSignupSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -15,19 +29,9 @@ const designerSignupSchema = z.object({
   phone: z.string().optional(),
 });
 
-const clientSignupSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  phone: z.string().optional(),
-  city: z.string().optional(),
-  projectTypes: z.array(z.string()).optional(),
-});
-
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
-  role: z.enum(['designer', 'client']).optional().default('designer'),
 });
 
 function signToken(payload: { id: string; role: string }) {
@@ -52,49 +56,25 @@ router.post('/signup/designer', async (req: Request, res: Response) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-
     const designer = await prisma.designer.create({
       data: { fullName, email, passwordHash, businessName, phone, status: 'approved' },
     });
 
     const token = signToken({ id: designer.id, role: 'designer' });
 
-    res.status(201).json({ message: 'Account created successfully.', token, role: 'designer' });
+    res.cookie(SESSION_COOKIE, token, cookieOptions());
+    res.status(201).json({
+      message: 'Account created successfully.',
+      role: 'designer',
+      user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
 
-// POST /api/auth/signup/client
-router.post('/signup/client', async (req: Request, res: Response) => {
-  const parsed = clientSignupSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0].message });
-    return;
-  }
-
-  // Client self-registrations are queued for designer assignment.
-  // We store them as a designer record with a note for now (MVP approach).
-  // In production, this would be a separate ClientRegistration table.
-  const { email } = parsed.data;
-
-  try {
-    const existing = await prisma.designer.findUnique({ where: { email } });
-    if (existing) {
-      res.status(409).json({ error: 'An account with this email already exists.' });
-      return;
-    }
-
-    // For the MVP, client self-registrations are acknowledged and a designer is assigned manually.
-    res.status(201).json({ message: 'Registration received. A designer will be in touch with you shortly.' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'An error occurred. Please try again.' });
-  }
-});
-
-// POST /api/auth/login — unified login for designer & client
+// POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -102,48 +82,66 @@ router.post('/login', async (req: Request, res: Response) => {
     return;
   }
 
-  const { email, password, role } = parsed.data;
+  const { email, password } = parsed.data;
 
   try {
-    if (role === 'designer') {
-      const designer = await prisma.designer.findUnique({ where: { email } });
-      if (!designer) {
-        res.status(401).json({ error: 'Invalid email or password.' });
-        return;
-      }
-
-      const valid = await bcrypt.compare(password, designer.passwordHash);
-      if (!valid) {
-        res.status(401).json({ error: 'Invalid email or password.' });
-        return;
-      }
-
-      if (designer.status === 'suspended' || designer.status === 'rejected') {
-        res.status(403).json({ error: 'Your account is not active. Please contact support.' });
-        return;
-      }
-
-      const token = signToken({ id: designer.id, role: 'designer' });
-
-      res.json({
-        token,
-        role: 'designer',
-        user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
-      });
+    const designer = await prisma.designer.findUnique({ where: { email } });
+    if (!designer) {
+      res.status(401).json({ error: 'Invalid email or password.' });
       return;
     }
 
-    // Client login — access code based (MVP placeholder)
-    res.status(401).json({ error: 'Client login requires an access code from your designer.' });
+    const valid = await bcrypt.compare(password, designer.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid email or password.' });
+      return;
+    }
+
+    if (designer.status === 'suspended' || designer.status === 'rejected') {
+      res.status(403).json({ error: 'Your account is not active. Please contact support.' });
+      return;
+    }
+
+    // MVP: auto-approve legacy pending_review accounts on login
+    if (designer.status === 'pending_review') {
+      await prisma.designer.update({ where: { id: designer.id }, data: { status: 'approved' } });
+    }
+
+    const token = signToken({ id: designer.id, role: 'designer' });
+
+    res.cookie(SESSION_COOKIE, token, cookieOptions());
+    res.json({
+      role: 'designer',
+      user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
 
-// POST /api/auth/client/login — client access code login (legacy route)
-router.post('/client/login', async (req: Request, res: Response) => {
-  res.status(501).json({ error: 'Client portal access requires an invitation link from your designer.' });
+// POST /api/auth/logout
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.json({ message: 'Logged out successfully.' });
+});
+
+// GET /api/auth/me
+router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const designer = await prisma.designer.findUnique({
+      where: { id: req.user!.id },
+      select: { id: true, fullName: true, email: true, businessName: true, phone: true, status: true, createdAt: true },
+    });
+    if (!designer) {
+      res.status(404).json({ error: 'Account not found.' });
+      return;
+    }
+    res.json(designer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
 });
 
 export default router;

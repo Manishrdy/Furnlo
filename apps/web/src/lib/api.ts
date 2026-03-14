@@ -2,10 +2,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 type ApiResponse<T> = { data: T; error?: never } | { data?: never; error: string };
 
-async function request<T>(path: string, options: RequestInit): Promise<ApiResponse<T>> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   try {
     const res = await fetch(`${API_URL}${path}`, {
       ...options,
+      credentials: 'include', // always send session cookie
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -24,6 +25,8 @@ async function request<T>(path: string, options: RequestInit): Promise<ApiRespon
   }
 }
 
+/* ─── Payload & response types ─────────────────────── */
+
 export interface SignupDesignerPayload {
   fullName: string;
   email: string;
@@ -32,54 +35,98 @@ export interface SignupDesignerPayload {
   phone?: string;
 }
 
-export interface SignupClientPayload {
-  fullName: string;
-  email: string;
-  password: string;
-  phone?: string;
-  city?: string;
-  projectTypes?: string[];
-}
-
 export interface LoginPayload {
   email: string;
   password: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  role: 'designer' | 'client';
-  user: {
-    id: string;
-    fullName?: string;
-    name?: string;
-    email: string;
-    status?: string;
-  };
+export interface AuthUser {
+  id: string;
+  fullName?: string;
+  email: string;
+  status?: string;
 }
 
+export interface AuthResponse {
+  role: 'designer';
+  user: AuthUser;
+}
+
+export interface DesignerProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  businessName?: string;
+  phone?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface Address {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+}
+
+export interface Client {
+  id: string;
+  designerId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  billingAddress?: Address | null;
+  shippingAddress?: Address | null;
+  createdAt: string;
+  _count?: { projects: number };
+}
+
+export interface ClientDetail extends Client {
+  projects: { id: string; name: string; status: string; createdAt: string }[];
+}
+
+export interface ClientPayload {
+  name: string;
+  email?: string;
+  phone?: string;
+  billingAddress?: Address;
+  shippingAddress?: Address;
+}
+
+/* ─── API methods ───────────────────────────────────── */
+
 export const api = {
+  // Auth
   signupDesigner: (payload: SignupDesignerPayload) =>
-    request<{ message: string }>('/api/auth/signup/designer', {
+    request<AuthResponse>('/api/auth/signup/designer', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  signupClient: (payload: SignupClientPayload) =>
-    request<{ message: string }>('/api/auth/signup/client', {
+  login: (payload: LoginPayload) =>
+    request<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  loginDesigner: (payload: LoginPayload) =>
-    request<AuthResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ ...payload, role: 'designer' }),
-    }),
+  logout: () =>
+    request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
 
-  loginClient: (payload: LoginPayload) =>
-    request<AuthResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ ...payload, role: 'client' }),
-    }),
+  getMe: () =>
+    request<DesignerProfile>('/api/auth/me'),
+
+  // Clients
+  getClients: () =>
+    request<Client[]>('/api/clients'),
+
+  createClient: (payload: ClientPayload) =>
+    request<Client>('/api/clients', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getClient: (id: string) =>
+    request<ClientDetail>(`/api/clients/${id}`),
+
+  updateClient: (id: string, payload: ClientPayload) =>
+    request<Client>(`/api/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 };

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-
-type Role = 'designer' | 'client';
+import { useAuthStore } from '@/lib/store/auth';
 
 /* ── Logo mark ──────────────────────────────────────────────── */
 function Logo({ size = 32 }: { size?: number }) {
@@ -50,7 +50,8 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export default function LoginPage() {
-  const [role, setRole] = useState<Role>('designer');
+  const router = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -58,16 +59,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => router.push('/dashboard'), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [success, router]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !password.trim()) { setError('Please fill in all fields.'); return; }
     setLoading(true);
     setError('');
-    const result = role === 'designer'
-      ? await api.loginDesigner({ email, password })
-      : await api.loginClient({ email, password });
+    const result = await api.login({ email, password });
     setLoading(false);
     if (result.error) { setError(result.error); return; }
+    setUser(result.data.user);
     setSuccess(true);
   }
 
@@ -115,7 +122,7 @@ export default function LoginPage() {
             Welcome back!
           </h2>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 28 }}>
-            {role === 'designer' ? 'Redirecting to your design studio…' : 'Redirecting to your client portal…'}
+            Redirecting to your design studio…
           </p>
 
           {/* Progress bar */}
@@ -309,45 +316,8 @@ export default function LoginPage() {
               </h2>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                 Continue to your{' '}
-                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>
-                  {role === 'designer' ? 'design studio' : 'client portal'}
-                </span>.
+                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>design studio</span>.
               </p>
-            </div>
-
-            {/* Role toggle */}
-            <div style={{
-              display: 'flex',
-              background: 'var(--bg-input)',
-              border: '1.5px solid var(--border)',
-              borderRadius: 12,
-              padding: 4,
-              marginBottom: 24,
-              gap: 4,
-            }}>
-              {(['designer', 'client'] as Role[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => { setRole(r); setError(''); }}
-                  style={{
-                    flex: 1,
-                    padding: '9px 0',
-                    borderRadius: 9,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
-                    background: role === r ? '#fff' : 'transparent',
-                    color: role === r ? 'var(--gold)' : 'var(--text-muted)',
-                    boxShadow: role === r ? 'var(--shadow-sm), 0 0 0 1.5px var(--gold-border)' : 'none',
-                  }}
-                >
-                  {r === 'designer' ? '✦ Designer' : '◆ Client'}
-                </button>
-              ))}
             </div>
 
             {/* Form */}

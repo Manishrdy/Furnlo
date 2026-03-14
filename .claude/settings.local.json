@@ -4,7 +4,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(grep -E \"^autoprefixer$|^postcss$|^tailwindcss$\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(/bin/zsh -l -c \"which npm && node --version && npm --version\")"
     ]
   }
 }
