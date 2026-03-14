@@ -10,6 +10,7 @@ import authRouter from './routes/auth';
 import clientsRouter from './routes/clients';
 import portalRouter from './routes/portal';
 import projectsRouter from './routes/projects';
+import adminRouter from './routes/admin';
 
 const app = express();
 const PORT = process.env.API_PORT ?? 4000;
@@ -22,7 +23,6 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-// HTTP request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.on('finish', () => {
     logger.info('http', {
@@ -43,8 +43,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/clients', clientsRouter);
 app.use('/api/portal', portalRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/admin', adminRouter);
 
-// Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error(err.message, { stack: err.stack });
   res.status(500).json({ error: 'Internal server error' });

@@ -509,7 +509,7 @@ function RoomCard({
               </span>
             )}
             {budget && (
-              <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{budget}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{budget}</span>
             )}
           </div>
         </div>
@@ -580,7 +580,7 @@ function RoomCard({
               <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Inspiration: </span>
               {room.clientRequirements.inspirationLinks.map((link, i) => (
                 <a key={i} href={link} target="_blank" rel="noreferrer"
-                  style={{ color: 'var(--gold)', marginRight: 8, fontSize: 12 }}>
+                  style={{ color: 'var(--text-secondary)', marginRight: 8, fontSize: 12, textDecoration: 'underline' }}>
                   Link {i + 1}
                 </a>
               ))}
@@ -685,9 +685,6 @@ export default function RoomsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 6 }}>
-            Rooms
-          </div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
             {rooms.length} {rooms.length === 1 ? 'Room' : 'Rooms'}
           </h2>

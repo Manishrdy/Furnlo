@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/auth';
-import { api, DesignerProfile, DashboardStats } from '@/lib/api';
+import { api, DesignerProfile, DashboardStats, ProjectSummary } from '@/lib/api';
 
 const STATS = [
   {
@@ -99,14 +99,24 @@ const QUICK_ACTIONS = [
   },
 ];
 
+const STATUS_DOT: Record<string, string> = {
+  draft: '#B0ADA8', active: '#2d7a4f', ordered: '#2563eb', closed: '#555',
+};
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const [profile, setProfile] = useState<DesignerProfile | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({ activeProjects: 0, totalClients: 0, totalShortlisted: 0, totalOrders: 0 });
+  const [profile, setProfile]   = useState<DesignerProfile | null>(null);
+  const [stats, setStats]       = useState<DashboardStats>({ activeProjects: 0, totalClients: 0, totalShortlisted: 0, totalOrders: 0 });
+  const [recent, setRecent]     = useState<ProjectSummary[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
 
   useEffect(() => {
     api.getMe().then((r) => { if (r.data) setProfile(r.data); });
     api.getDashboardStats().then((r) => { if (r.data) setStats(r.data); });
+    api.getProjects().then((r) => {
+      if (r.data) setRecent(r.data.slice(0, 5));
+      setRecentLoading(false);
+    });
   }, []);
 
   const firstName = (profile?.fullName ?? user?.fullName ?? '').split(' ')[0] || 'Designer';
@@ -117,10 +127,7 @@ export default function DashboardPage() {
 
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{ marginBottom: 40 }}>
-        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
-          Studio Overview
-        </div>
-        <h1 style={{ fontSize: 30, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', marginBottom: 6 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.035em', marginBottom: 6 }}>
           Good morning, {firstName}.
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -229,37 +236,78 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent activity placeholder */}
+        {/* Recent projects */}
         <div className="card" style={{ padding: 28 }}>
-          <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
-              Activity
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
+                Projects
+              </div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+                Recent projects
+              </h2>
             </div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              Recent activity
-            </h2>
+            <Link href="/projects" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              View all →
+            </Link>
           </div>
 
-          <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '36px 0', gap: 10,
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 11,
-              background: 'var(--bg-input)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-muted)',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
+          {recentLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+              <svg className="anim-rotate" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56" />
               </svg>
+              Loading…
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6, maxWidth: 200 }}>
-              Activity will appear here once you start working on projects.
-            </p>
-          </div>
+          ) : recent.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 0', gap: 10 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6, maxWidth: 200, margin: 0 }}>
+                No projects yet. Create your first project to get started.
+              </p>
+              <Link href="/projects/new" style={{ textDecoration: 'none' }}>
+                <button className="btn-ghost" style={{ fontSize: 12 }}>+ New Project</button>
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {recent.map((p) => (
+                <Link key={p.id} href={`/projects/${p.id}`} style={{ textDecoration: 'none' }}>
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 12px', borderRadius: 9,
+                      border: '1px solid var(--border)', background: 'var(--bg-input)',
+                      transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.background = '#fff';
+                      (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-input)';
+                      (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <div style={{
+                      width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                      background: STATUS_DOT[p.status] ?? '#B0ADA8',
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1 }}>
+                        {p.client.name} · {p._count.rooms} room{p._count.rooms !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0, textTransform: 'capitalize', fontWeight: 600 }}>
+                      {p.status}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

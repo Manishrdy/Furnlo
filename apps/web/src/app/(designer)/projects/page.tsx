@@ -68,10 +68,7 @@ export default function ProjectsPage() {
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
-            Projects
-          </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', margin: 0 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.035em', margin: 0 }}>
             All Projects
           </h1>
         </div>
@@ -213,7 +210,7 @@ export default function ProjectsPage() {
                     ))}
                     {budget && (
                       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{budget}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{budget}</div>
                         <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 1 }}>Budget</div>
                       </div>
                     )}

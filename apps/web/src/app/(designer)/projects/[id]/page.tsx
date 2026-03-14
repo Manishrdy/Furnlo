@@ -3,9 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, ProjectDetail, ProjectUpdatePayload, Address } from '@/lib/api';
+import { api, ProjectDetail, ProjectUpdatePayload, Address, AuditLogEntry } from '@/lib/api';
 
 /* ─── Helpers ───────────────────────────────────────── */
+
+function formatActivityLabel(action: string): string {
+  const MAP: Record<string, string> = {
+    project_created:        'Project created',
+    project_status_changed: 'Project status changed',
+    room_created:           'Room added',
+    room_deleted:           'Room removed',
+  };
+  return MAP[action] ?? action.replace(/_/g, ' ');
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -89,11 +99,11 @@ function PortalLinkButton({
       onClick={handleCopy}
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        background: copied ? 'rgba(39,103,73,0.1)' : 'var(--gold-dim)',
-        border: `1px solid ${copied ? 'rgba(39,103,73,0.25)' : 'var(--gold-border)'}`,
+        background: copied ? 'rgba(39,103,73,0.1)' : 'var(--bg-input)',
+        border: `1px solid ${copied ? 'rgba(39,103,73,0.25)' : 'var(--border-strong)'}`,
         borderRadius: 8, padding: '7px 14px',
         fontSize: 12.5, fontWeight: 700,
-        color: copied ? '#276749' : 'var(--gold)',
+        color: copied ? '#276749' : 'var(--text-secondary)',
         cursor: 'pointer', transition: 'all 0.15s',
       }}
     >
@@ -114,24 +124,28 @@ export default function ProjectOverviewPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [project, setProject] = useState<ProjectDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [project, setProject]   = useState<ProjectDetail | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [activity, setActivity] = useState<AuditLogEntry[]>([]);
 
   // Edit form state
-  const [editName, setEditName] = useState('');
+  const [editName, setEditName]             = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editBudgetMin, setEditBudgetMin] = useState('');
-  const [editBudgetMax, setEditBudgetMax] = useState('');
-  const [editStyle, setEditStyle] = useState('');
-  const [editStatus, setEditStatus] = useState<string>('draft');
+  const [editBudgetMin, setEditBudgetMin]   = useState('');
+  const [editBudgetMax, setEditBudgetMax]   = useState('');
+  const [editStyle, setEditStyle]           = useState('');
+  const [editStatus, setEditStatus]         = useState<string>('draft');
 
   useEffect(() => {
     api.getProject(id).then((r) => {
       if (r.data) { setProject(r.data); populateEdit(r.data); }
       setLoading(false);
+    });
+    api.getProjectActivity(id).then((r) => {
+      if (r.data) setActivity(r.data);
     });
   }, [id]);
 
@@ -183,7 +197,7 @@ export default function ProjectOverviewPage() {
     return (
       <div style={{ padding: '36px 40px' }}>
         <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Project not found.</div>
-        <Link href="/projects" style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 600 }}>← Back to projects</Link>
+        <Link href="/projects" style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>← Back to projects</Link>
       </div>
     );
   }
@@ -347,39 +361,72 @@ export default function ProjectOverviewPage() {
             <div className="card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Rooms</div>
-                <Link href={`/projects/${id}/rooms`} style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>Manage →</Link>
+                <Link href={`/projects/${id}/rooms`} style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700, textDecoration: 'none' }}>Manage →</Link>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {project.rooms.map((room) => (
-                  <div key={room.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '10px 14px', borderRadius: 10,
-                    border: '1px solid var(--border)', background: 'var(--bg-input)',
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{room.name}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {room.categoryNeeds.slice(0, 4).map((cat) => (
-                          <span key={cat} className="tag-chip">{cat}</span>
-                        ))}
-                        {room.categoryNeeds.length > 4 && (
-                          <span className="tag-chip">+{room.categoryNeeds.length - 4}</span>
-                        )}
+                  <Link key={room.id} href={`/projects/${id}/rooms/${room.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 10,
+                      border: '1px solid var(--border)', background: 'var(--bg-input)',
+                      transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-input)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{room.name}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                          {room.categoryNeeds.slice(0, 4).map((cat) => (
+                            <span key={cat} className="tag-chip">{cat}</span>
+                          ))}
+                          {room.categoryNeeds.length > 4 && (
+                            <span className="tag-chip">+{room.categoryNeeds.length - 4}</span>
+                          )}
+                        </div>
+                      </div>
+                      {room.areaSqft && (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, flexShrink: 0 }}>
+                          {Number(room.areaSqft).toFixed(0)} sq.ft
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Activity timeline */}
+          {activity.length > 0 && (
+            <div className="card" style={{ padding: 24 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 18 }}>Activity</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {activity.map((entry, i) => (
+                  <div key={entry.id} style={{ display: 'flex', gap: 12, position: 'relative' }}>
+                    {/* Timeline line */}
+                    {i < activity.length - 1 && (
+                      <div style={{
+                        position: 'absolute', left: 6, top: 20, bottom: -4,
+                        width: 1, background: 'var(--border)',
+                      }} />
+                    )}
+                    {/* Dot */}
+                    <div style={{
+                      width: 13, height: 13, borderRadius: '50%', flexShrink: 0, marginTop: 4,
+                      background: 'var(--bg-card)', border: '2px solid var(--border-strong)',
+                      zIndex: 1,
+                    }} />
+                    {/* Content */}
+                    <div style={{ flex: 1, paddingBottom: 14 }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+                        {formatActivityLabel(entry.action)}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    {room.areaSqft && (
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, flexShrink: 0 }}>
-                        {Number(room.areaSqft).toFixed(0)} sq.ft
-                      </div>
-                    )}
-                    {room._count && (
-                      <div style={{
-                        background: 'var(--gold-dim)', border: '1px solid var(--gold-border)',
-                        borderRadius: 999, padding: '2px 8px', fontSize: 11, color: 'var(--gold)', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {room._count.shortlistItems}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -407,7 +454,7 @@ export default function ProjectOverviewPage() {
               </div>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 1 }}>{project.client.name}</div>
-                <Link href={`/clients/${project.client.id}`} style={{ fontSize: 11.5, color: 'var(--gold)', fontWeight: 600, textDecoration: 'none' }}>
+                <Link href={`/clients/${project.client.id}`} style={{ fontSize: 11.5, color: 'var(--text-secondary)', fontWeight: 600, textDecoration: 'none' }}>
                   View client →
                 </Link>
               </div>

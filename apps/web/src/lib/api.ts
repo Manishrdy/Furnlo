@@ -13,7 +13,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
       },
     });
 
-    // Safely parse body — non-JSON responses (e.g. Express HTML 404s) must not crash the client
     let body: Record<string, unknown> = {};
     const contentType = res.headers.get('content-type') ?? '';
     if (contentType.includes('application/json')) {
@@ -43,6 +42,12 @@ export interface SignupDesignerPayload {
   phone?: string;
 }
 
+export interface SignupResponse {
+  pending: boolean;
+  message: string;
+  user: { id: string; fullName: string; email: string };
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -56,7 +61,7 @@ export interface AuthUser {
 }
 
 export interface AuthResponse {
-  role: 'designer';
+  role: 'designer' | 'admin';
   user: AuthUser;
 }
 
@@ -67,7 +72,14 @@ export interface DesignerProfile {
   businessName?: string;
   phone?: string;
   status: string;
+  isAdmin: boolean;
   createdAt: string;
+}
+
+export interface ProfileUpdatePayload {
+  fullName?: string;
+  businessName?: string | null;
+  phone?: string | null;
 }
 
 /* ─── Shared types ──────────────────────────────────── */
@@ -204,6 +216,17 @@ export interface DashboardStats {
   totalOrders: number;
 }
 
+export interface AuditLogEntry {
+  id: string;
+  actorType: 'designer' | 'client' | 'admin' | 'system';
+  actorId: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+}
+
 /* ─── Portal types ──────────────────────────────────── */
 
 export interface PortalProduct {
@@ -253,21 +276,65 @@ export interface PortalProject {
   orders: PortalOrder[];
 }
 
+/* ─── Admin types ───────────────────────────────────── */
+
+export interface AdminStats {
+  designers: {
+    total: number;
+    pending_review: number;
+    approved: number;
+    rejected: number;
+    suspended: number;
+  };
+  totalProjects: number;
+  totalOrders: number;
+}
+
+export interface AdminDesigner {
+  id: string;
+  fullName: string;
+  email: string;
+  businessName: string | null;
+  phone: string | null;
+  status: string;
+  isAdmin: boolean;
+  createdAt: string;
+  _count: { clients: number; projects: number; orders: number };
+}
+
+export interface AdminDesignerDetail extends AdminDesigner {
+  updatedAt: string;
+  projects: {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    client: { name: string };
+    _count: { rooms: number; shortlistItems: number };
+  }[];
+}
+
 /* ─── API methods ───────────────────────────────────── */
 
 export const api = {
   // Auth
   signupDesigner: (payload: SignupDesignerPayload) =>
-    request<AuthResponse>('/api/auth/signup/designer', { method: 'POST', body: JSON.stringify(payload) }),
+    request<SignupResponse>('/api/auth/signup/designer', { method: 'POST', body: JSON.stringify(payload) }),
 
   login: (payload: LoginPayload) =>
     request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+
+  adminLogin: (payload: LoginPayload) =>
+    request<AuthResponse>('/api/auth/admin/login', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () =>
     request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
 
   getMe: () =>
     request<DesignerProfile>('/api/auth/me'),
+
+  updateProfile: (payload: ProfileUpdatePayload) =>
+    request<DesignerProfile>('/api/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
 
   // Clients
   getClients: () =>
@@ -304,6 +371,9 @@ export const api = {
   generatePortalToken: (id: string) =>
     request<{ portalToken: string }>(`/api/projects/${id}/generate-token`, { method: 'POST' }),
 
+  getProjectActivity: (id: string) =>
+    request<AuditLogEntry[]>(`/api/projects/${id}/activity`),
+
   // Rooms
   createRoom: (projectId: string, payload: RoomPayload) =>
     request<Room>(`/api/projects/${projectId}/rooms`, { method: 'POST', body: JSON.stringify(payload) }),
@@ -314,7 +384,7 @@ export const api = {
   deleteRoom: (projectId: string, roomId: string) =>
     request<{ message: string }>(`/api/projects/${projectId}/rooms/${roomId}`, { method: 'DELETE' }),
 
-  // Portal (public — no auth required)
+  // Portal (public)
   getPortalProject: (portalToken: string) =>
     request<PortalProject>(`/api/portal/${portalToken}`),
 
@@ -327,4 +397,31 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
+
+  // Admin
+  getAdminMe: () =>
+    request<{ id: string; fullName: string; email: string; isAdmin: boolean }>('/api/admin/me'),
+
+  getAdminStats: () =>
+    request<AdminStats>('/api/admin/stats'),
+
+  getAdminDesigners: (params?: { status?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.search) qs.set('search', params.search);
+    const q = qs.toString();
+    return request<AdminDesigner[]>(`/api/admin/designers${q ? `?${q}` : ''}`);
+  },
+
+  getAdminDesigner: (id: string) =>
+    request<AdminDesignerDetail>(`/api/admin/designers/${id}`),
+
+  updateDesignerStatus: (id: string, status: string) =>
+    request<AdminDesigner>(`/api/admin/designers/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+
+  getAdminActivity: () =>
+    request<AuditLogEntry[]>('/api/admin/activity'),
 };

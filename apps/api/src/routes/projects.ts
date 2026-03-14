@@ -3,6 +3,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { prisma } from '@furnlo/db';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import { writeAuditLog } from '../services/auditLog';
 import logger from '../config/logger';
 
 const router = Router();
@@ -81,7 +82,6 @@ async function getOwnedProject(projectId: string, designerId: string) {
 }
 
 /* ─── GET /api/projects/stats ───────────────────────── */
-// Must be declared before /:id to avoid route conflict
 
 router.get('/stats', async (req: AuthRequest, res: Response) => {
   const designerId = req.user!.id;
@@ -169,6 +169,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       },
     });
 
+    writeAuditLog({
+      actorType: 'designer',
+      actorId: req.user!.id,
+      action: 'project_created',
+      entityType: 'project',
+      entityId: project.id,
+      payload: { name: project.name, status: project.status, clientName: client.name },
+    });
+
     res.status(201).json(serializeProject(project));
   } catch (err) {
     logger.error('projects route error', { err, path: req.path, method: req.method });
@@ -238,7 +247,42 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Log status changes
+    if (parsed.data.status && parsed.data.status !== existing.status) {
+      writeAuditLog({
+        actorType: 'designer',
+        actorId: req.user!.id,
+        action: 'project_status_changed',
+        entityType: 'project',
+        entityId: project.id,
+        payload: { from: existing.status, to: parsed.data.status },
+      });
+    }
+
     res.json(serializeProject(project));
+  } catch (err) {
+    logger.error('projects route error', { err, path: req.path, method: req.method });
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+});
+
+/* ─── GET /api/projects/:id/activity ────────────────── */
+
+router.get('/:id/activity', async (req: AuthRequest, res: Response) => {
+  try {
+    const project = await getOwnedProject(req.params.id, req.user!.id);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found.' });
+      return;
+    }
+
+    const logs = await prisma.auditLog.findMany({
+      where: { entityType: 'project', entityId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    res.json(logs);
   } catch (err) {
     logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
@@ -307,6 +351,15 @@ router.post('/:id/rooms', async (req: AuthRequest, res: Response) => {
         notes: notes || null,
       },
       include: { _count: { select: { shortlistItems: true } } },
+    });
+
+    writeAuditLog({
+      actorType: 'designer',
+      actorId: req.user!.id,
+      action: 'room_created',
+      entityType: 'project',
+      entityId: req.params.id,
+      payload: { roomId: room.id, roomName: room.name },
     });
 
     res.status(201).json(serializeRoom(room));
@@ -394,6 +447,16 @@ router.delete('/:id/rooms/:roomId', async (req: AuthRequest, res: Response) => {
     }
 
     await prisma.room.delete({ where: { id: req.params.roomId } });
+
+    writeAuditLog({
+      actorType: 'designer',
+      actorId: req.user!.id,
+      action: 'room_deleted',
+      entityType: 'project',
+      entityId: req.params.id,
+      payload: { roomId: room.id, roomName: room.name },
+    });
+
     res.json({ message: 'Room deleted.' });
   } catch (err) {
     logger.error('projects route error', { err, path: req.path, method: req.method });

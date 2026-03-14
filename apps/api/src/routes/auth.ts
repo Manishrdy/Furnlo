@@ -4,13 +4,14 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '@furnlo/db';
 import { config } from '../config';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import { writeAuditLog } from '../services/auditLog';
 import logger from '../config/logger';
 
 const router = Router();
 
 const SESSION_COOKIE = 'session';
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 function cookieOptions() {
   return {
@@ -22,12 +23,16 @@ function cookieOptions() {
   };
 }
 
+function signToken(payload: { id: string; role: string }) {
+  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn as string });
+}
+
 const designerSignupSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  businessName: z.string().optional(),
-  phone: z.string().optional(),
+  businessName: z.string().max(100).optional(),
+  phone: z.string().max(30).optional(),
 });
 
 const loginSchema = z.object({
@@ -35,9 +40,11 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-function signToken(payload: { id: string; role: string }) {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn as string });
-}
+const profileUpdateSchema = z.object({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters').optional(),
+  businessName: z.string().max(100).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+});
 
 // POST /api/auth/signup/designer
 router.post('/signup/designer', async (req: Request, res: Response) => {
@@ -58,16 +65,21 @@ router.post('/signup/designer', async (req: Request, res: Response) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const designer = await prisma.designer.create({
-      data: { fullName, email, passwordHash, businessName, phone, status: 'approved' },
+      data: { fullName, email, passwordHash, businessName, phone, status: 'pending_review' },
     });
 
-    const token = signToken({ id: designer.id, role: 'designer' });
+    writeAuditLog({
+      actorType: 'system',
+      actorId: designer.id,
+      action: 'designer_signup',
+      entityType: 'designer',
+      entityId: designer.id,
+    });
 
-    res.cookie(SESSION_COOKIE, token, cookieOptions());
     res.status(201).json({
-      message: 'Account created successfully.',
-      role: 'designer',
-      user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
+      pending: true,
+      message: 'Your application has been submitted for review.',
+      user: { id: designer.id, fullName: designer.fullName, email: designer.email },
     });
   } catch (err) {
     logger.error('auth route error', { err, path: req.path, method: req.method });
@@ -98,22 +110,75 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
-    if (designer.status === 'suspended' || designer.status === 'rejected') {
-      res.status(403).json({ error: 'Your account is not active. Please contact support.' });
+    if (designer.status === 'pending_review') {
+      res.status(403).json({
+        error: "Your account is under review. You'll receive access once approved.",
+        code: 'PENDING_REVIEW',
+      });
       return;
     }
 
-    // MVP: auto-approve legacy pending_review accounts on login
-    if (designer.status === 'pending_review') {
-      await prisma.designer.update({ where: { id: designer.id }, data: { status: 'approved' } });
+    if (designer.status === 'rejected') {
+      res.status(403).json({
+        error: 'Your application was not approved. Please contact support.',
+        code: 'REJECTED',
+      });
+      return;
+    }
+
+    if (designer.status === 'suspended') {
+      res.status(403).json({
+        error: 'Your account has been suspended. Please contact support.',
+        code: 'SUSPENDED',
+      });
+      return;
     }
 
     const token = signToken({ id: designer.id, role: 'designer' });
-
     res.cookie(SESSION_COOKIE, token, cookieOptions());
     res.json({
       role: 'designer',
       user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
+    });
+  } catch (err) {
+    logger.error('auth route error', { err, path: req.path, method: req.method });
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+});
+
+// POST /api/auth/admin/login
+router.post('/admin/login', async (req: Request, res: Response) => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  const { email, password } = parsed.data;
+
+  try {
+    const designer = await prisma.designer.findUnique({ where: { email } });
+    if (!designer) {
+      res.status(401).json({ error: 'Invalid email or password.' });
+      return;
+    }
+
+    const valid = await bcrypt.compare(password, designer.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid email or password.' });
+      return;
+    }
+
+    if (!designer.isAdmin) {
+      res.status(403).json({ error: 'Access denied. This account does not have admin privileges.' });
+      return;
+    }
+
+    const token = signToken({ id: designer.id, role: 'admin' });
+    res.cookie(SESSION_COOKIE, token, cookieOptions());
+    res.json({
+      role: 'admin',
+      user: { id: designer.id, fullName: designer.fullName, email: designer.email },
     });
   } catch (err) {
     logger.error('auth route error', { err, path: req.path, method: req.method });
@@ -132,12 +197,41 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const designer = await prisma.designer.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, fullName: true, email: true, businessName: true, phone: true, status: true, createdAt: true },
+      select: {
+        id: true, fullName: true, email: true,
+        businessName: true, phone: true, status: true,
+        isAdmin: true, createdAt: true,
+      },
     });
     if (!designer) {
       res.status(404).json({ error: 'Account not found.' });
       return;
     }
+    res.json(designer);
+  } catch (err) {
+    logger.error('auth route error', { err, path: req.path, method: req.method });
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+});
+
+// PUT /api/auth/me
+router.put('/me', requireAuth, requireRole('designer'), async (req: AuthRequest, res: Response) => {
+  const parsed = profileUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const designer = await prisma.designer.update({
+      where: { id: req.user!.id },
+      data: parsed.data,
+      select: {
+        id: true, fullName: true, email: true,
+        businessName: true, phone: true, status: true,
+        isAdmin: true, createdAt: true,
+      },
+    });
     res.json(designer);
   } catch (err) {
     logger.error('auth route error', { err, path: req.path, method: req.method });

@@ -34,13 +34,13 @@
   --green-border: rgba(44,99,71,0.18);
 
   /* Sidebar */
-  --sidebar-bg:          #111111;
-  --sidebar-border:      rgba(255,255,255,0.06);
-  --sidebar-text:        rgba(255,255,255,0.55);
-  --sidebar-text-active: rgba(255,255,255,0.95);
-  --sidebar-hover-bg:    rgba(255,255,255,0.05);
-  --sidebar-active-bg:   rgba(255,255,255,0.08);
-  --sidebar-active-border: rgba(158,124,63,0.50);
+  --sidebar-bg:            #FFFFFF;
+  --sidebar-border:        rgba(0,0,0,0.07);
+  --sidebar-text:          #8C8984;
+  --sidebar-text-active:   #0F0F0F;
+  --sidebar-hover-bg:      #F5F4F1;
+  --sidebar-active-bg:     #F0EEE9;
+  --sidebar-active-border: #0F0F0F;
 }
 
 /* ─── Base ───────────────────────────────────────────────── */
@@ -293,9 +293,3 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
 
-/* ─── Login split layout ─────────────────────────────────── */
-.login-panel-visual { display: none; }
-@media (min-width: 900px) { .login-panel-visual { display: block; } }
-
-.login-logo-mobile { display: flex; }
-@media (min-width: 900px) { .login-logo-mobile { display: none; } }

@@ -93,9 +93,6 @@ export default function NewClientPage() {
       </Link>
 
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
-          New Client
-        </div>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', marginBottom: 4 }}>
           Add a client
         </h1>

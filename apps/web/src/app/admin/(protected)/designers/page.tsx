@@ -1,0 +1,187 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { api, AdminDesigner } from '@/lib/api';
+
+const STATUS_OPTIONS = ['', 'pending_review', 'approved', 'rejected', 'suspended'];
+const STATUS_STYLE: Record<string, { color: string; bg: string; label: string }> = {
+  approved:       { color: '#2d7a4f', bg: '#e8f5ee', label: 'Approved' },
+  pending_review: { color: '#7a5c2d', bg: '#fdf5e6', label: 'Pending' },
+  rejected:       { color: '#8b2635', bg: '#fdecea', label: 'Rejected' },
+  suspended:      { color: '#555',    bg: '#f0f0f0', label: 'Suspended' },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_STYLE[status] ?? { color: '#555', bg: '#f0f0f0', label: status };
+  return (
+    <span style={{
+      fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
+      color: s.color, background: s.bg,
+      padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase',
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
+export default function AdminDesignersPage() {
+  const [designers, setDesigners] = useState<AdminDesigner[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [status, setStatus]       = useState('');
+  const [search, setSearch]       = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  const load = useCallback((s: string, q: string) => {
+    setLoading(true);
+    api.getAdminDesigners({ status: s || undefined, search: q || undefined }).then((r) => {
+      if (r.data) setDesigners(r.data);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => { load(status, search); }, [status, search, load]);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput.trim());
+  }
+
+  return (
+    <div style={{ padding: '40px 40px 80px' }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
+          Designers
+        </h1>
+        <p style={{ margin: '6px 0 0', fontSize: 13.5, color: 'var(--text-muted)' }}>
+          Manage designer accounts and applications.
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        {/* Search */}
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 6 }}>
+          <input
+            className="input-field"
+            type="text"
+            placeholder="Search by name or email…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ width: 240, fontSize: 13 }}
+          />
+          <button type="submit" className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }}>
+            Search
+          </button>
+          {search && (
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ fontSize: 13, padding: '8px 10px' }}
+              onClick={() => { setSearch(''); setSearchInput(''); }}
+            >
+              ×
+            </button>
+          )}
+        </form>
+
+        {/* Status filter */}
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="input-field"
+          style={{ fontSize: 13, padding: '8px 12px', width: 'auto' }}
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {s === '' ? 'All statuses' : STATUS_STYLE[s]?.label ?? s}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 13.5, padding: '40px 0' }}>
+          <svg className="anim-rotate" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 12a9 9 0 11-6.219-8.56" />
+          </svg>
+          Loading…
+        </div>
+      ) : designers.length === 0 ? (
+        <div className="card" style={{ padding: '50px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
+          No designers found
+        </div>
+      ) : (
+        <div className="card" style={{ overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Name', 'Email', 'Business', 'Projects', 'Clients', 'Status', 'Joined', ''].map((h) => (
+                  <th key={h} style={{
+                    padding: '10px 16px', textAlign: 'left',
+                    fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+                    textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                  }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {designers.map((d) => (
+                <tr
+                  key={d.id}
+                  style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'var(--bg-input)')}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = '')}
+                >
+                  <td style={{ padding: '12px 16px', fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                    {d.fullName}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {d.email}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {d.businessName ?? '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    {d._count.projects}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    {d._count.clients}
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <StatusBadge status={d.status} />
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <Link
+                      href={`/admin/designers/${d.id}`}
+                      style={{
+                        fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
+                        textDecoration: 'none', padding: '5px 12px',
+                        border: '1px solid var(--border)', borderRadius: 7,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+        {designers.length} result{designers.length !== 1 ? 's' : ''}
+      </div>
+    </div>
+  );
+}

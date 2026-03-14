@@ -38,7 +38,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                 fontSize: 13.5, fontWeight: 700,
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                 textDecoration: 'none',
-                borderBottom: `2px solid ${isActive ? 'var(--gold)' : 'transparent'}`,
+                borderBottom: `2px solid ${isActive ? '#0F0F0F' : 'transparent'}`,
                 transition: 'color 0.15s, border-color 0.15s',
                 whiteSpace: 'nowrap',
               }}
