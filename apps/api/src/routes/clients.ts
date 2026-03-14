@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '@furnlo/db';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import logger from '../config/logger';
 
 const router = Router();
 router.use(requireAuth, requireRole('designer'));
@@ -33,7 +34,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     });
     res.json(clients);
   } catch (err) {
-    console.error(err);
+    logger.error('clients route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -61,7 +62,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     });
     res.status(201).json(client);
   } catch (err) {
-    console.error(err);
+    logger.error('clients route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -85,7 +86,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     }
     res.json(client);
   } catch (err) {
-    console.error(err);
+    logger.error('clients route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -121,7 +122,33 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     });
     res.json(client);
   } catch (err) {
-    console.error(err);
+    logger.error('clients route error', { err, path: req.path, method: req.method });
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+});
+
+// DELETE /api/clients/:id
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const client = await prisma.client.findFirst({
+      where: { id: req.params.id, designerId: req.user!.id },
+      include: { _count: { select: { projects: true } } },
+    });
+    if (!client) {
+      logger.warn('DELETE /api/clients/:id — not found', { clientId: req.params.id, designerId: req.user!.id });
+      res.status(404).json({ error: 'Client not found.' });
+      return;
+    }
+    if (client._count.projects > 0) {
+      res.status(400).json({
+        error: `Cannot delete this client — they have ${client._count.projects} project${client._count.projects > 1 ? 's' : ''}. Delete all projects first.`,
+      });
+      return;
+    }
+    await prisma.client.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Client deleted.' });
+  } catch (err) {
+    logger.error('clients route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });

@@ -14,18 +14,18 @@ const STATUS_FILTERS = [
 ];
 
 const STATUS_STYLES: Record<string, { bg: string; border: string; color: string }> = {
-  draft:   { bg: 'rgba(0,0,0,0.05)',    border: 'rgba(0,0,0,0.10)',    color: 'var(--text-muted)' },
-  active:  { bg: 'rgba(39,103,73,0.1)', border: 'rgba(39,103,73,0.22)', color: '#276749' },
-  ordered: { bg: 'rgba(44,82,130,0.1)', border: 'rgba(44,82,130,0.22)', color: '#2c5282' },
-  closed:  { bg: 'rgba(0,0,0,0.05)',    border: 'rgba(0,0,0,0.10)',    color: 'var(--text-muted)' },
+  draft:   { bg: 'rgba(0,0,0,0.04)',     border: 'rgba(0,0,0,0.09)',     color: 'var(--text-muted)' },
+  active:  { bg: 'var(--green-dim)',      border: 'var(--green-border)',   color: 'var(--green)' },
+  ordered: { bg: 'rgba(50,80,190,0.07)', border: 'rgba(50,80,190,0.18)', color: '#3850be' },
+  closed:  { bg: 'rgba(0,0,0,0.04)',     border: 'rgba(0,0,0,0.09)',     color: 'var(--text-muted)' },
 };
 
 function formatBudget(min: number | null, max: number | null): string | null {
   if (!min && !max) return null;
   const fmt = (v: number) => {
-    if (v >= 10000000) return `₹${(v / 10000000).toFixed(1).replace('.0', '')}Cr`;
-    if (v >= 100000)   return `₹${(v / 100000).toFixed(1).replace('.0', '')}L`;
-    return `₹${(v / 1000).toFixed(0)}K`;
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(1).replace('.0', '')}M`;
+    if (v >= 1000)    return `$${(v / 1000).toFixed(0)}K`;
+    return `$${v}`;
   };
   if (min && max) return `${fmt(min)} – ${fmt(max)}`;
   if (min) return `From ${fmt(min)}`;
@@ -33,7 +33,7 @@ function formatBudget(min: number | null, max: number | null): string | null {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function initials(name: string) {
@@ -63,21 +63,21 @@ export default function ProjectsPage() {
     : projects;
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1100 }}>
+    <div style={{ padding: '40px 44px', maxWidth: 1100 }}>
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 4 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
             Projects
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', margin: 0 }}>
             All Projects
           </h1>
         </div>
         <Link href="/projects/new" style={{ textDecoration: 'none' }}>
           <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             New Project
@@ -86,18 +86,18 @@ export default function ProjectsPage() {
       </div>
 
       {/* ── Filters + Search ────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 5 }}>
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
               onClick={() => setActiveFilter(f.value)}
               style={{
-                border: `1px solid ${activeFilter === f.value ? 'var(--gold-border)' : 'var(--border)'}`,
-                background: activeFilter === f.value ? 'var(--gold-dim)' : 'transparent',
-                color: activeFilter === f.value ? 'var(--gold)' : 'var(--text-muted)',
-                borderRadius: 999, padding: '5px 14px', fontSize: 12.5, fontWeight: 700,
-                cursor: 'pointer', transition: 'all 0.15s',
+                border: `1px solid ${activeFilter === f.value ? 'var(--border-strong)' : 'var(--border)'}`,
+                background: activeFilter === f.value ? '#111111' : 'transparent',
+                color: activeFilter === f.value ? '#fff' : 'var(--text-muted)',
+                borderRadius: 999, padding: '5px 14px', fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', transition: 'all 0.12s',
               }}
             >
               {f.label}
@@ -106,7 +106,7 @@ export default function ProjectsPage() {
         </div>
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
           <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5">
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
@@ -115,15 +115,15 @@ export default function ProjectsPage() {
             placeholder="Search projects or clients…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: 36, width: '100%' }}
+            style={{ paddingLeft: 34, width: '100%' }}
           />
         </div>
       </div>
 
       {/* ── List ────────────────────────────────────────── */}
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 14 }}>
-          <svg className="anim-rotate" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 13.5 }}>
+          <svg className="anim-rotate" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 12a9 9 0 11-6.219-8.56" />
           </svg>
           Loading projects…
@@ -131,18 +131,18 @@ export default function ProjectsPage() {
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '72px 0' }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
-            background: 'var(--bg-input)', border: '1.5px dashed var(--border-strong)',
+            width: 50, height: 50, borderRadius: 13, margin: '0 auto 16px',
+            background: 'var(--bg-input)', border: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
             {search ? 'No projects match your search' : 'No projects yet'}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 22 }}>
             {search ? 'Try a different search term.' : 'Create your first project to get started.'}
           </div>
           {!search && (
@@ -152,7 +152,7 @@ export default function ProjectsPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 13 }}>
           {filtered.map((p) => {
             const st = STATUS_STYLES[p.status] ?? STATUS_STYLES.draft;
             const budget = formatBudget(p.budgetMin, p.budgetMax);
@@ -163,7 +163,7 @@ export default function ProjectsPage() {
                   style={{ padding: '20px 22px', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-lg)';
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)';
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
@@ -171,17 +171,18 @@ export default function ProjectsPage() {
                   }}
                 >
                   {/* Top row */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {p.name}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{
-                          width: 20, height: 20, borderRadius: '50%',
-                          background: 'linear-gradient(145deg, #e8d5a3, #c9a84c)',
+                          width: 18, height: 18, borderRadius: '50%',
+                          background: 'var(--bg-input)',
+                          border: '1px solid var(--border)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 8, fontWeight: 800, color: '#7a4f0a', flexShrink: 0,
+                          fontSize: 7.5, fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0,
                         }}>
                           {initials(p.client.name)}
                         </div>
@@ -191,7 +192,7 @@ export default function ProjectsPage() {
                     <div style={{
                       background: st.bg, border: `1px solid ${st.border}`,
                       borderRadius: 999, padding: '3px 10px',
-                      fontSize: 11, color: st.color, fontWeight: 700, flexShrink: 0,
+                      fontSize: 10.5, color: st.color, fontWeight: 600, flexShrink: 0,
                       textTransform: 'capitalize',
                     }}>
                       {p.status}
@@ -206,14 +207,14 @@ export default function ProjectsPage() {
                       { label: 'Orders', value: p._count.orders },
                     ].map((stat) => (
                       <div key={stat.label}>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>{stat.value}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{stat.label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{stat.value}</div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 1 }}>{stat.label}</div>
                       </div>
                     ))}
                     {budget && (
                       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{budget}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Budget</div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 1 }}>Budget</div>
                       </div>
                     )}
                   </div>

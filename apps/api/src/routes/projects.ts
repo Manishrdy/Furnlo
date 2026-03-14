@@ -3,6 +3,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { prisma } from '@furnlo/db';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import logger from '../config/logger';
 
 const router = Router();
 router.use(requireAuth, requireRole('designer'));
@@ -93,7 +94,7 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
     ]);
     res.json({ activeProjects, totalClients, totalShortlisted, totalOrders });
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -125,7 +126,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
     res.json(projects.map(serializeProject));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -170,7 +171,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(serializeProject(project));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -203,7 +204,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     res.json(serializeProject(project));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -239,7 +240,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 
     res.json(serializeProject(project));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -267,7 +268,7 @@ router.post('/:id/generate-token', async (req: AuthRequest, res: Response) => {
 
     res.json({ portalToken: updated.portalToken });
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -310,7 +311,7 @@ router.post('/:id/rooms', async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(serializeRoom(room));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -361,7 +362,7 @@ router.put('/:id/rooms/:roomId', async (req: AuthRequest, res: Response) => {
 
     res.json(serializeRoom(room));
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -395,7 +396,7 @@ router.delete('/:id/rooms/:roomId', async (req: AuthRequest, res: Response) => {
     await prisma.room.delete({ where: { id: req.params.roomId } });
     res.json({ message: 'Room deleted.' });
   } catch (err) {
-    console.error(err);
+    logger.error('projects route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });

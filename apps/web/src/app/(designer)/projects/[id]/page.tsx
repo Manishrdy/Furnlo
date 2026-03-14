@@ -8,20 +8,20 @@ import { api, ProjectDetail, ProjectUpdatePayload, Address } from '@/lib/api';
 /* ─── Helpers ───────────────────────────────────────── */
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function formatAddress(addr?: Address | null) {
   if (!addr) return null;
-  return [addr.line1, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+  return [addr.line1, addr.city, addr.state, addr.zip].filter(Boolean).join(', ');
 }
 
 function formatBudget(min: number | null, max: number | null): string | null {
   if (!min && !max) return null;
   const fmt = (v: number) => {
-    if (v >= 10000000) return `₹${(v / 10000000).toFixed(1).replace('.0', '')}Cr`;
-    if (v >= 100000)   return `₹${(v / 100000).toFixed(1).replace('.0', '')}L`;
-    return `₹${(v / 1000).toFixed(0)}K`;
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(1).replace('.0', '')}M`;
+    if (v >= 1000)    return `$${(v / 1000).toFixed(0)}K`;
+    return `$${v}`;
   };
   if (min && max) return `${fmt(min)} – ${fmt(max)}`;
   if (min) return `From ${fmt(min)}`;
@@ -34,10 +34,10 @@ function initials(name: string) {
 
 const STATUS_OPTIONS = ['draft', 'active', 'ordered', 'closed'] as const;
 const STATUS_STYLES: Record<string, { bg: string; border: string; color: string }> = {
-  draft:   { bg: 'rgba(0,0,0,0.05)',    border: 'rgba(0,0,0,0.10)',    color: 'var(--text-muted)' },
-  active:  { bg: 'rgba(39,103,73,0.1)', border: 'rgba(39,103,73,0.22)', color: '#276749' },
-  ordered: { bg: 'rgba(44,82,130,0.1)', border: 'rgba(44,82,130,0.22)', color: '#2c5282' },
-  closed:  { bg: 'rgba(0,0,0,0.05)',    border: 'rgba(0,0,0,0.10)',    color: 'var(--text-muted)' },
+  draft:   { bg: 'rgba(0,0,0,0.04)',     border: 'rgba(0,0,0,0.09)',     color: 'var(--text-muted)' },
+  active:  { bg: 'var(--green-dim)',      border: 'var(--green-border)',   color: 'var(--green)' },
+  ordered: { bg: 'rgba(50,80,190,0.07)', border: 'rgba(50,80,190,0.18)', color: '#3850be' },
+  closed:  { bg: 'rgba(0,0,0,0.04)',     border: 'rgba(0,0,0,0.09)',     color: 'var(--text-muted)' },
 };
 
 /* ─── Copy Portal Link ──────────────────────────────── */
@@ -254,11 +254,11 @@ export default function ProjectOverviewPage() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
                   <div>
-                    <label className="form-label">Budget Min (₹)</label>
+                    <label className="form-label">Budget Min ($)</label>
                     <input className="input-field" type="number" value={editBudgetMin} onChange={(e) => setEditBudgetMin(e.target.value)} min="0" />
                   </div>
                   <div>
-                    <label className="form-label">Budget Max (₹)</label>
+                    <label className="form-label">Budget Max ($)</label>
                     <input className="input-field" type="number" value={editBudgetMax} onChange={(e) => setEditBudgetMax(e.target.value)} min="0" />
                   </div>
                 </div>
@@ -398,9 +398,10 @@ export default function ProjectOverviewPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
               <div style={{
                 width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(145deg, #e8d5a3, #c9a84c)',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, fontWeight: 800, color: '#7a4f0a',
+                fontSize: 15, fontWeight: 700, color: 'var(--text-secondary)',
               }}>
                 {initials(project.client.name)}
               </div>

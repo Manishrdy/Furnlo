@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@furnlo/db';
 import { config } from '../config';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.post('/signup/designer', async (req: Request, res: Response) => {
       user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
     });
   } catch (err) {
-    console.error(err);
+    logger.error('auth route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -115,7 +116,7 @@ router.post('/login', async (req: Request, res: Response) => {
       user: { id: designer.id, fullName: designer.fullName, email: designer.email, status: designer.status },
     });
   } catch (err) {
-    console.error(err);
+    logger.error('auth route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -139,7 +140,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
     }
     res.json(designer);
   } catch (err) {
-    console.error(err);
+    logger.error('auth route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });

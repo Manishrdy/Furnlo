@@ -14,13 +14,12 @@ function Logo() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
       <div style={{
         width: 30, height: 30, borderRadius: 8,
-        background: 'linear-gradient(145deg, #c98e1a 0%, #a8710a 100%)',
+        background: 'var(--bg-input)', border: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 2px 8px rgba(168,113,10,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
         flexShrink: 0,
       }}>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path d="M2 3.5h12M2 8h7M2 12.5h9" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M2 3.5h12M2 8h7M2 12.5h9" stroke="var(--text-secondary)" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </div>
       <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>tradeliv</span>
@@ -48,7 +47,7 @@ function StepBar({ phase }: { phase: Phase }) {
       <div className={`step-dot ${phase === 1 ? 'active' : 'done'}`} />
       <div style={{
         flex: 1, height: 2, borderRadius: 2,
-        background: phase === 2 ? 'linear-gradient(90deg, var(--gold), rgba(168,113,10,0.2))' : 'var(--border)',
+        background: phase === 2 ? '#111111' : 'var(--border)',
         transition: 'background 0.4s',
       }} />
       <div className={`step-dot ${phase === 2 ? 'active' : ''}`} />
@@ -154,37 +153,29 @@ export default function SignupPage() {
         <div className="card p-10 text-center max-w-md w-full anim-scale-in">
           <Logo />
 
-          <div style={{ position: 'relative', width: 88, height: 88, margin: '28px auto 24px' }}>
+          <div style={{ position: 'relative', width: 80, height: 80, margin: '28px auto 24px' }}>
             <div style={{
-              position: 'absolute', top: '50%', left: '50%',
-              width: 88, height: 88, borderRadius: '50%',
-              background: 'rgba(168,113,10,0.1)',
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.05)',
               animation: 'successRing 2s ease-out infinite',
             }} />
             <div style={{
-              position: 'absolute', top: '50%', left: '50%',
-              width: 88, height: 88, borderRadius: '50%',
-              background: 'rgba(168,113,10,0.06)',
-              animation: 'successRing 2s ease-out infinite 0.8s',
-            }} />
-            <div style={{
-              position: 'relative', width: 88, height: 88, borderRadius: '50%',
-              background: 'linear-gradient(145deg, #fef9f0, #fef3dc)',
-              border: '2px solid rgba(168,113,10,0.28)',
-              boxShadow: '0 4px 24px rgba(168,113,10,0.15)',
+              position: 'relative', width: 80, height: 80, borderRadius: '50%',
+              background: 'var(--bg-input)', border: '1.5px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M9 18.5L15 24.5L27 12.5"
-                  stroke="var(--gold)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"
-                  strokeDasharray="60"
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M8 16.5L13 21.5L24 10.5"
+                  stroke="var(--text-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray="50"
                   style={{ animation: 'checkStroke 0.7s ease-out 0.2s both' }}
                 />
               </svg>
             </div>
           </div>
 
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 10 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
             Account Created
           </div>
 
@@ -205,11 +196,11 @@ export default function SignupPage() {
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: step.done ? 'rgba(168,113,10,0.12)' : 'transparent',
-                  border: `1.5px solid ${step.done ? 'rgba(168,113,10,0.32)' : 'var(--border-strong)'}`,
+                  background: step.done ? 'var(--bg-input)' : 'transparent',
+                  border: `1.5px solid ${step.done ? 'var(--border-strong)' : 'var(--border)'}`,
                 }}>
                   {step.done
-                    ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 5-5" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" /></svg>
+                    ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 5-5" stroke="var(--text-secondary)" strokeWidth="1.8" strokeLinecap="round" /></svg>
                     : <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--border-strong)' }} />
                   }
                 </div>
@@ -282,7 +273,7 @@ export default function SignupPage() {
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
           Already have an account?{' '}
-          <Link href="/login" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none', borderBottom: '1.5px solid var(--gold-border)', paddingBottom: 1 }}>Sign in</Link>
+          <Link href="/login" style={{ color: 'var(--text-primary)', fontWeight: 700, textDecoration: 'none', borderBottom: '1.5px solid var(--border-strong)', paddingBottom: 1 }}>Sign in</Link>
         </p>
         <p style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
           By continuing you agree to Tradeliv&apos;s{' '}

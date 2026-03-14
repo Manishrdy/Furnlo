@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '@furnlo/db';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -85,7 +86,7 @@ router.get('/:portalToken', async (req: Request, res: Response) => {
 
     res.json(project);
   } catch (err) {
-    console.error(err);
+    logger.error('portal route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });
@@ -143,7 +144,7 @@ router.put('/:portalToken/shortlist/:itemId', async (req: Request, res: Response
 
     res.json(updated);
   } catch (err) {
-    console.error(err);
+    logger.error('portal route error', { err, path: req.path, method: req.method });
     res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 });

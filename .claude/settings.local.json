@@ -5,7 +5,8 @@
       "Bash(git commit:*)",
       "Bash(grep -E \"^autoprefixer$|^postcss$|^tailwindcss$\")",
       "Bash(npm install:*)",
-      "Bash(/bin/zsh -l -c \"which npm && node --version && npm --version\")"
+      "Bash(/bin/zsh -l -c \"which npm && node --version && npm --version\")",
+      "WebFetch(domain:simcricketx.app)"
     ]
   }
 }

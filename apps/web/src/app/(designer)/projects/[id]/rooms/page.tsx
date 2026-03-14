@@ -97,9 +97,9 @@ function formToPayload(f: RoomFormState): RoomPayload {
 function formatBudget(min: number | null, max: number | null) {
   if (!min && !max) return null;
   const fmt = (v: number) => {
-    if (v >= 10000000) return `₹${(v / 10000000).toFixed(1).replace('.0', '')}Cr`;
-    if (v >= 100000)   return `₹${(v / 100000).toFixed(1).replace('.0', '')}L`;
-    return `₹${(v / 1000).toFixed(0)}K`;
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(1).replace('.0', '')}M`;
+    if (v >= 1000)    return `$${(v / 1000).toFixed(0)}K`;
+    return `$${v}`;
   };
   if (min && max) return `${fmt(min)} – ${fmt(max)}`;
   if (min) return `From ${fmt(min)}`;
@@ -114,11 +114,11 @@ function CategoryChip({ label, selected, onClick }: { label: string; selected: b
       type="button"
       onClick={onClick}
       style={{
-        border: `1px solid ${selected ? 'var(--gold-border)' : 'var(--border)'}`,
-        background: selected ? 'var(--gold-dim)' : 'transparent',
-        color: selected ? 'var(--gold)' : 'var(--text-muted)',
+        border: `1px solid ${selected ? '#111111' : 'var(--border)'}`,
+        background: selected ? '#111111' : 'transparent',
+        color: selected ? '#fff' : 'var(--text-muted)',
         borderRadius: 999, padding: '4px 12px',
-        fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.12s',
+        fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.12s',
       }}
     >
       {label}
@@ -272,7 +272,7 @@ function RoomForm({
           ))}
         </div>
         {areaSqft && (
-          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 6 }}>
             Area: {areaSqft} sq ft
           </div>
         )}
@@ -285,7 +285,7 @@ function RoomForm({
           {(['budgetMin', 'budgetMax'] as const).map((k, i) => (
             <div key={k}>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
-                {['Min (₹)', 'Max (₹)'][i]}
+                {['Min ($)', 'Max ($)'][i]}
               </div>
               <input
                 className="input-field"
@@ -343,10 +343,10 @@ function RoomForm({
         </div>
 
         <div>
-          {fieldLabel('Colour Palette')}
+          {fieldLabel('Color Palette')}
           <input
             className="input-field"
-            placeholder="e.g. Warm neutrals, earthy tones…"
+            placeholder="e.g. Warm neutrals, cream and navy…"
             value={form.colorPalette}
             onChange={(e) => set('colorPalette', e.target.value)}
             style={{ width: '100%' }}
@@ -680,15 +680,15 @@ export default function RoomsPage() {
     setRooms((prev) => prev.filter((r) => r.id !== roomId));
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 760 }}>
+    <div style={{ padding: '40px 44px', maxWidth: 760 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 3 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 6 }}>
             Rooms
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
             {rooms.length} {rooms.length === 1 ? 'Room' : 'Rooms'}
           </h2>
         </div>

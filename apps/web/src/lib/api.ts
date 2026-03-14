@@ -13,13 +13,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
       },
     });
 
-    const body = await res.json();
-
-    if (!res.ok) {
-      return { error: body.error || body.message || 'Something went wrong' };
+    // Safely parse body — non-JSON responses (e.g. Express HTML 404s) must not crash the client
+    let body: Record<string, unknown> = {};
+    const contentType = res.headers.get('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      body = await res.json();
+    } else {
+      const text = await res.text();
+      if (text) body = { message: text };
     }
 
-    return { data: body };
+    if (!res.ok) {
+      return { error: (body.error as string) || (body.message as string) || `Request failed (${res.status})` };
+    }
+
+    return { data: body as T };
   } catch {
     return { error: 'Unable to connect to the server. Please try again.' };
   }
@@ -69,7 +77,7 @@ export interface Address {
   line2?: string;
   city?: string;
   state?: string;
-  pincode?: string;
+  zip?: string;
   country?: string;
 }
 
@@ -273,6 +281,9 @@ export const api = {
 
   updateClient: (id: string, payload: ClientPayload) =>
     request<Client>(`/api/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+
+  deleteClient: (id: string) =>
+    request<{ message: string }>(`/api/clients/${id}`, { method: 'DELETE' }),
 
   // Projects
   getDashboardStats: () =>

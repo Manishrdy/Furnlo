@@ -5,18 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, Client, ClientPayload } from '@/lib/api';
 
-/* ─── Budget chips ──────────────────────────────────── */
-
 const BUDGET_CHIPS = [
-  { label: 'Up to ₹5L',   min: 0,        max: 500000 },
-  { label: '₹5L – ₹15L',  min: 500000,   max: 1500000 },
-  { label: '₹15L – ₹30L', min: 1500000,  max: 3000000 },
-  { label: '₹30L – ₹50L', min: 3000000,  max: 5000000 },
-  { label: '₹50L – ₹1Cr', min: 5000000,  max: 10000000 },
-  { label: '₹1Cr+',        min: 10000000, max: 0 },
+  { label: 'Under $10K',    min: 0,      max: 10000 },
+  { label: '$10K – $25K',   min: 10000,  max: 25000 },
+  { label: '$25K – $50K',   min: 25000,  max: 50000 },
+  { label: '$50K – $100K',  min: 50000,  max: 100000 },
+  { label: '$100K – $250K', min: 100000, max: 250000 },
+  { label: '$250K+',        min: 250000, max: 0 },
 ];
-
-/* ─── Helpers ───────────────────────────────────────── */
 
 function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -25,16 +21,16 @@ function initials(name: string) {
 function StepDot({ n, active, done }: { n: number; active: boolean; done: boolean }) {
   return (
     <div style={{
-      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 12, fontWeight: 800,
-      background: done ? 'var(--gold)' : active ? 'var(--gold-dim)' : 'var(--bg-input)',
-      border: `2px solid ${done || active ? 'var(--gold-border)' : 'var(--border)'}`,
-      color: done ? '#fff' : active ? 'var(--gold)' : 'var(--text-muted)',
+      fontSize: 11, fontWeight: 700,
+      background: done ? '#111111' : active ? 'var(--bg-input)' : 'var(--bg-input)',
+      border: `1.5px solid ${done ? '#111111' : active ? 'var(--border-strong)' : 'var(--border)'}`,
+      color: done ? '#fff' : active ? 'var(--text-primary)' : 'var(--text-muted)',
       transition: 'all 0.2s',
     }}>
       {done ? (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       ) : n}
@@ -42,21 +38,16 @@ function StepDot({ n, active, done }: { n: number; active: boolean; done: boolea
   );
 }
 
-/* ─── Main page ─────────────────────────────────────── */
-
 export default function NewProjectPage() {
   const router = useRouter();
 
-  // Step state
   const [step, setStep] = useState<1 | 2>(1);
 
-  // Step 1 — client selection
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  // Step 1 — inline new client
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
@@ -64,7 +55,6 @@ export default function NewProjectPage() {
   const [creatingClient, setCreatingClient] = useState(false);
   const [clientError, setClientError] = useState('');
 
-  // Step 2 — project details
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [budgetMin, setBudgetMin] = useState('');
@@ -91,8 +81,7 @@ export default function NewProjectPage() {
 
   async function handleCreateClient() {
     if (!newClientName.trim()) { setClientError('Client name is required.'); return; }
-    setCreatingClient(true);
-    setClientError('');
+    setCreatingClient(true); setClientError('');
     const payload: ClientPayload = {
       name: newClientName.trim(),
       email: newClientEmail.trim() || undefined,
@@ -112,10 +101,6 @@ export default function NewProjectPage() {
     setActiveChip(idx);
     setBudgetMin(chip.min > 0 ? String(chip.min) : '');
     setBudgetMax(chip.max > 0 ? String(chip.max) : '');
-  }
-
-  function clearChipIfManual() {
-    setActiveChip(-1);
   }
 
   async function handleSubmit(status: 'draft' | 'active') {
@@ -142,21 +127,23 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 760 }}>
+    <div style={{ padding: '40px 44px', maxWidth: 720 }}>
 
       {/* ── Back ────────────────────────────────────────── */}
-      <Link href="/projects" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textDecoration: 'none', marginBottom: 28 }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--gold)')}
+      <Link
+        href="/projects"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, textDecoration: 'none', marginBottom: 28 }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-primary)')}
         onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-muted)')}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
         Back to projects
       </Link>
 
       {/* ── Step indicator ──────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 36 }}>
         {[
           { n: 1, label: 'Select Client' },
           { n: 2, label: 'Project Details' },
@@ -165,14 +152,14 @@ export default function NewProjectPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <StepDot n={s.n} active={step === s.n} done={step > s.n} />
               <span style={{
-                fontSize: 13, fontWeight: 700,
-                color: step === s.n ? 'var(--text-primary)' : step > s.n ? 'var(--gold)' : 'var(--text-muted)',
+                fontSize: 13, fontWeight: 600,
+                color: step === s.n ? 'var(--text-primary)' : step > s.n ? 'var(--text-secondary)' : 'var(--text-muted)',
               }}>
                 {s.label}
               </span>
             </div>
             {i < 1 && (
-              <div style={{ width: 40, height: 1, background: step > s.n ? 'var(--gold-border)' : 'var(--border)', margin: '0 12px' }} />
+              <div style={{ width: 44, height: 1, background: step > s.n ? 'var(--border-strong)' : 'var(--border)', margin: '0 14px' }} />
             )}
           </div>
         ))}
@@ -184,7 +171,7 @@ export default function NewProjectPage() {
       {step === 1 && (
         <div>
           <div style={{ marginBottom: 24 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 6 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 6 }}>
               Select a client
             </h1>
             <p style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
@@ -193,9 +180,9 @@ export default function NewProjectPage() {
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', marginBottom: 16 }}>
+          <div style={{ position: 'relative', marginBottom: 14 }}>
             <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5">
+              width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
@@ -204,15 +191,15 @@ export default function NewProjectPage() {
               placeholder="Search clients…"
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
-              style={{ paddingLeft: 36, width: '100%' }}
+              style={{ paddingLeft: 34, width: '100%' }}
             />
           </div>
 
           {/* Client list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, maxHeight: 360, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, maxHeight: 340, overflowY: 'auto' }}>
             {clientsLoading ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>
-                <svg className="anim-rotate" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg className="anim-rotate" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 12a9 9 0 11-6.219-8.56" />
                 </svg>
                 Loading clients…
@@ -229,35 +216,38 @@ export default function NewProjectPage() {
                     key={c.id}
                     onClick={() => setSelectedClient(isSelected ? null : c)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                      border: `1.5px solid ${isSelected ? 'var(--gold-border)' : 'var(--border)'}`,
-                      background: isSelected ? 'var(--gold-dim)' : 'var(--bg-input)',
-                      transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: 13,
+                      padding: '11px 15px', borderRadius: 9, cursor: 'pointer',
+                      border: `1px solid ${isSelected ? '#111111' : 'var(--border)'}`,
+                      background: isSelected ? '#111111' : 'var(--bg-input)',
+                      transition: 'all 0.12s',
                     }}
                   >
                     <div style={{
-                      width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                      background: 'linear-gradient(145deg, #e8d5a3, #c9a84c)',
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      background: isSelected ? 'rgba(255,255,255,0.12)' : 'var(--bg-card)',
+                      border: `1px solid ${isSelected ? 'rgba(255,255,255,0.12)' : 'var(--border)'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 800, color: '#7a4f0a',
+                      fontSize: 12, fontWeight: 700, color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
                     }}>
                       {initials(c.name)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>{c.name}</div>
-                      {c.email && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email}</div>}
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: isSelected ? '#fff' : 'var(--text-primary)', marginBottom: 1 }}>{c.name}</div>
+                      {c.email && <div style={{ fontSize: 12, color: isSelected ? 'rgba(255,255,255,0.50)' : 'var(--text-muted)' }}>{c.email}</div>}
                     </div>
                     {c._count?.projects !== undefined && (
                       <div style={{
-                        background: 'var(--bg-input)', border: '1px solid var(--border)',
-                        borderRadius: 999, padding: '2px 9px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600,
+                        background: isSelected ? 'rgba(255,255,255,0.09)' : 'var(--bg-card)',
+                        border: `1px solid ${isSelected ? 'rgba(255,255,255,0.10)' : 'var(--border)'}`,
+                        borderRadius: 999, padding: '2px 9px', fontSize: 11,
+                        color: isSelected ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)', fontWeight: 600,
                       }}>
                         {c._count.projects} project{c._count.projects !== 1 ? 's' : ''}
                       </div>
                     )}
                     {isSelected && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
@@ -273,15 +263,15 @@ export default function NewProjectPage() {
               onClick={() => setShowNewClient(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                border: '1.5px dashed var(--border-strong)', background: 'transparent',
-                color: 'var(--text-muted)', fontSize: 13.5, fontWeight: 600,
-                transition: 'all 0.15s',
+                padding: '11px 15px', borderRadius: 9, cursor: 'pointer',
+                border: '1px dashed var(--border-strong)', background: 'transparent',
+                color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
+                transition: 'all 0.12s',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--gold-border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--gold)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-input)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
               Create a new client
@@ -317,8 +307,8 @@ export default function NewProjectPage() {
             </div>
           )}
 
-          {/* Continue button */}
-          <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Continue */}
+          <div style={{ marginTop: 28, paddingTop: 22, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
             <button
               className="btn-primary"
               disabled={!selectedClient}
@@ -326,18 +316,18 @@ export default function NewProjectPage() {
               style={{ display: 'flex', alignItems: 'center', gap: 7 }}
             >
               Continue
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
           </div>
 
           {selectedClient && (
-            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round">
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-secondary)' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <strong style={{ color: 'var(--gold)' }}>{selectedClient.name}</strong> selected
+              <strong>{selectedClient.name}</strong> selected
             </div>
           )}
         </div>
@@ -349,18 +339,17 @@ export default function NewProjectPage() {
       {step === 2 && (
         <div>
           <div style={{ marginBottom: 24 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 6 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 6 }}>
               Project details
             </h1>
             <p style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              For <strong style={{ color: 'var(--text-primary)' }}>{selectedClient?.name}</strong>
+              For <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{selectedClient?.name}</strong>
             </p>
           </div>
 
           <div className="card" style={{ padding: 28 }}>
 
-            {/* Project name */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 18 }}>
               <label className="form-label">Project Name *</label>
               <input
                 className="input-field"
@@ -372,8 +361,7 @@ export default function NewProjectPage() {
               />
             </div>
 
-            {/* Description */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 18 }}>
               <label className="form-label">Description</label>
               <textarea
                 className="input-field"
@@ -385,21 +373,20 @@ export default function NewProjectPage() {
               />
             </div>
 
-            {/* Budget */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 18 }}>
               <label className="form-label">Total Budget</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                 {BUDGET_CHIPS.map((chip, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => handleChipSelect(i)}
                     style={{
-                      border: `1px solid ${activeChip === i ? 'var(--gold-border)' : 'var(--border)'}`,
-                      background: activeChip === i ? 'var(--gold-dim)' : 'var(--bg-input)',
-                      color: activeChip === i ? 'var(--gold)' : 'var(--text-secondary)',
-                      borderRadius: 999, padding: '5px 13px', fontSize: 12.5, fontWeight: 600,
-                      cursor: 'pointer', transition: 'all 0.15s',
+                      border: `1px solid ${activeChip === i ? '#111111' : 'var(--border)'}`,
+                      background: activeChip === i ? '#111111' : 'var(--bg-input)',
+                      color: activeChip === i ? '#fff' : 'var(--text-secondary)',
+                      borderRadius: 999, padding: '5px 13px', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', transition: 'all 0.12s',
                     }}
                   >
                     {chip.label}
@@ -408,23 +395,23 @@ export default function NewProjectPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="form-label">Min (₹)</label>
+                  <label className="form-label">Min ($)</label>
                   <input
                     className="input-field"
                     type="number"
                     value={budgetMin}
-                    onChange={(e) => { setBudgetMin(e.target.value); clearChipIfManual(); }}
+                    onChange={(e) => { setBudgetMin(e.target.value); setActiveChip(-1); }}
                     placeholder="e.g., 500000"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="form-label">Max (₹)</label>
+                  <label className="form-label">Max ($)</label>
                   <input
                     className="input-field"
                     type="number"
                     value={budgetMax}
-                    onChange={(e) => { setBudgetMax(e.target.value); clearChipIfManual(); }}
+                    onChange={(e) => { setBudgetMax(e.target.value); setActiveChip(-1); }}
                     placeholder="e.g., 1500000"
                     min="0"
                   />
@@ -432,8 +419,7 @@ export default function NewProjectPage() {
               </div>
             </div>
 
-            {/* Style preference */}
-            <div style={{ marginBottom: 8 }}>
+            <div>
               <label className="form-label">Style Preference</label>
               <input
                 className="input-field"
@@ -445,29 +431,21 @@ export default function NewProjectPage() {
             </div>
           </div>
 
-          {projectError && <div className="error-box" style={{ marginTop: 16 }}>{projectError}</div>}
+          {projectError && <div className="error-box" style={{ marginTop: 14 }}>{projectError}</div>}
 
           {/* Actions */}
-          <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
             <button className="btn-ghost" onClick={() => setStep(1)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
               Back
             </button>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                className="btn-ghost"
-                onClick={() => handleSubmit('draft')}
-                disabled={submitting}
-              >
+              <button className="btn-ghost" onClick={() => handleSubmit('draft')} disabled={submitting}>
                 {submitting && submitMode === 'draft' ? 'Saving…' : 'Save as Draft'}
               </button>
-              <button
-                className="btn-primary"
-                onClick={() => handleSubmit('active')}
-                disabled={submitting}
-              >
+              <button className="btn-primary" onClick={() => handleSubmit('active')} disabled={submitting}>
                 {submitting && submitMode === 'active' ? 'Creating…' : 'Create Project'}
               </button>
             </div>
